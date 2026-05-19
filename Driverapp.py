@@ -61,6 +61,14 @@ st.markdown("""
             text-transform: uppercase;
         }
 
+        .ride-hero-logo {
+            width: 8.75rem;
+            max-width: 28vw;
+            border-radius: 8px;
+            border: 1px solid rgba(151, 179, 166, 0.18);
+            background: rgba(7, 16, 20, 0.34);
+        }
+
         .ride-hero-title {
             color: var(--rh-text);
             font-size: 2.15rem;
@@ -273,6 +281,14 @@ st.markdown("""
 
             .ride-hero-header {
                 padding: 1rem;
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 1rem !important;
+            }
+
+            .ride-hero-logo {
+                width: 6.5rem;
+                max-width: 42vw;
             }
 
             .ride-hero-title {
@@ -709,25 +725,25 @@ def render_welcome_page():
     """Premium first-run welcome screen before the main dashboard."""
     st.markdown(
         """
-        <div class="welcome-shell">
-            <div class="welcome-card">
-                <div class="welcome-logo">RH</div>
-                <h1 class="welcome-title">Ride Hero</h1>
-                <p class="welcome-tagline">Built by a driver, for drivers.</p>
-                <p class="welcome-copy">
-                    A focused command center for FHV drivers to understand daily profit,
-                    stay ahead of obligations, and make better driving decisions.
-                </p>
-                <div class="welcome-grid">
-                    <div class="welcome-feature">Track earnings</div>
-                    <div class="welcome-feature">Track expenses</div>
-                    <div class="welcome-feature">Monitor goals</div>
-                    <div class="welcome-feature">Manage documents and bills</div>
-                    <div class="welcome-feature">Ask RideHero assistant</div>
-                </div>
-            </div>
+<div class="welcome-shell">
+    <div class="welcome-card">
+        <div class="welcome-logo">RH</div>
+        <h1 class="welcome-title">Ride Hero</h1>
+        <p class="welcome-tagline">Built by a driver, for drivers.</p>
+        <p class="welcome-copy">
+            A focused command center for FHV drivers to understand daily profit,
+            stay ahead of obligations, and make better driving decisions.
+        </p>
+        <div class="welcome-grid">
+            <div class="welcome-feature">Track earnings</div>
+            <div class="welcome-feature">Track expenses</div>
+            <div class="welcome-feature">Monitor goals</div>
+            <div class="welcome-feature">Manage documents and bills</div>
+            <div class="welcome-feature">Ask RideHero assistant</div>
         </div>
-        """,
+    </div>
+</div>
+""",
         unsafe_allow_html=True,
     )
 
@@ -750,45 +766,21 @@ if not st.session_state.get("ride_hero_dashboard_open", False):
 
 st.markdown(
     """
-    <div class="ride-hero-header" style="display:flex; align-items:center; gap:20px;">
-
-        <img src="https://raw.githubusercontent.com/Attiq1006/Ride-Hero/main/ride_hero_logo.png"
-        width="140"
-        style="border-radius:18px;"/>
-
-        <div>
-
-            <div class="ride-hero-eyebrow"
-            style="
-            font-size:22px;
-            font-weight:700;
-            letter-spacing:2px;
-            color:#39d98a;
-            ">
-            RIDE HERO
-            </div>
-
-            <h1 class="ride-hero-title"
-            style="
-            font-size:56px;
-            margin-top:4px;
-            margin-bottom:8px;
-            ">
-            Driver Earnings Command Center
-            </h1>
-
-            <p class="ride-hero-subtitle"
-            style="
-            font-size:18px;
-            color:#b8c4d6;
-            ">
+<div class="ride-hero-header" style="display: flex; align-items: center; gap: 20px;">
+    <img
+        class="ride-hero-logo"
+        src="https://raw.githubusercontent.com/Attiq1006/Ride-Hero/main/ride_hero_logo.png"
+        alt="Ride Hero logo"
+    />
+    <div>
+        <div class="ride-hero-eyebrow">RIDE HERO</div>
+        <h1 class="ride-hero-title">Driver Earnings Command Center</h1>
+        <p class="ride-hero-subtitle">
             Smart tools for FHV drivers to track profit, documents, bills, fares, services, and deals.
-            </p>
-
-        </div>
-
+        </p>
     </div>
-    """,
+</div>
+""",
     unsafe_allow_html=True,
 )
 today = date.today()
