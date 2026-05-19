@@ -1,4 +1,5 @@
 import calendar
+import os
 import sqlite3
 from datetime import date
 
@@ -9,19 +10,305 @@ import streamlit as st
 st.set_page_config(page_title="Ride Hero", layout="wide")
 st.markdown("""
     <style>
+        :root {
+            --rh-bg: #071014;
+            --rh-panel: #0d191f;
+            --rh-panel-soft: #11242c;
+            --rh-border: rgba(151, 179, 166, 0.18);
+            --rh-text: #edf7f2;
+            --rh-muted: #9fb2ab;
+            --rh-accent: #39d98a;
+            --rh-accent-2: #5cc8ff;
+            --rh-danger: #ff6b6b;
+            --rh-warning: #ffd166;
+        }
+
+        html, body, [data-testid="stAppViewContainer"] {
+            background: linear-gradient(135deg, #061014 0%, #08161b 48%, #0b171d 100%);
+            color: var(--rh-text);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        [data-testid="stHeader"] {
+            background: rgba(7, 16, 20, 0.72);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(151, 179, 166, 0.10);
+        }
+
         .block-container {
-            max-width: 1200px;
-            padding-top: 2rem;
-            padding-left: 3rem;
-            padding-right: 3rem;
+            max-width: 1280px;
+            padding: 2rem 2.5rem 3rem;
             margin: auto;
+        }
+
+        .ride-hero-header {
+            border: 1px solid var(--rh-border);
+            background:
+                linear-gradient(135deg, rgba(57, 217, 138, 0.12), rgba(92, 200, 255, 0.06)),
+                rgba(13, 25, 31, 0.92);
+            border-radius: 8px;
+            padding: 1.35rem 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+        }
+
+        .ride-hero-eyebrow {
+            color: var(--rh-accent);
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+        }
+
+        .ride-hero-title {
+            color: var(--rh-text);
+            font-size: 2.15rem;
+            font-weight: 850;
+            line-height: 1.1;
+            margin: 0;
+        }
+
+        .ride-hero-subtitle {
+            color: var(--rh-muted);
+            font-size: 1rem;
+            margin: 0.55rem 0 0;
+        }
+
+        .welcome-shell {
+            min-height: calc(100vh - 7rem);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 0;
+        }
+
+        .welcome-card {
+            width: min(920px, 100%);
+            border: 1px solid var(--rh-border);
+            background:
+                linear-gradient(135deg, rgba(57, 217, 138, 0.13), rgba(92, 200, 255, 0.07)),
+                rgba(13, 25, 31, 0.94);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+        }
+
+        .welcome-logo {
+            width: 3.6rem;
+            height: 3.6rem;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(57, 217, 138, 0.35);
+            border-radius: 8px;
+            background: rgba(57, 217, 138, 0.10);
+            color: var(--rh-accent);
+            font-weight: 900;
+            font-size: 1.25rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .welcome-title {
+            color: var(--rh-text);
+            font-size: 3rem;
+            font-weight: 900;
+            line-height: 1;
+            margin: 0;
+        }
+
+        .welcome-tagline {
+            color: var(--rh-accent);
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin: 0.85rem 0 0;
+        }
+
+        .welcome-copy {
+            color: var(--rh-muted);
+            font-size: 1.03rem;
+            max-width: 46rem;
+            margin: 1rem 0 1.35rem;
+        }
+
+        .welcome-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin: 1.4rem 0 1.8rem;
+        }
+
+        .welcome-feature {
+            border: 1px solid rgba(151, 179, 166, 0.15);
+            background: rgba(7, 16, 20, 0.38);
+            border-radius: 8px;
+            color: var(--rh-text);
+            font-size: 0.9rem;
+            font-weight: 750;
+            padding: 0.9rem;
+            min-height: 4.25rem;
+        }
+
+        h1, h2, h3, h4, h5, h6,
+        [data-testid="stMarkdownContainer"] h1,
+        [data-testid="stMarkdownContainer"] h2,
+        [data-testid="stMarkdownContainer"] h3 {
+            color: var(--rh-text);
+            letter-spacing: 0;
+        }
+
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stCaptionContainer"],
+        label, .st-emotion-cache-1dj0hjr {
+            color: var(--rh-muted);
+        }
+
+        div[data-testid="stTabs"] {
+            margin-top: 0.35rem;
+        }
+
+        div[data-testid="stTabs"] button {
+            color: var(--rh-muted);
+            border-radius: 8px 8px 0 0;
+            font-weight: 700;
+            padding: 0.75rem 1rem;
+        }
+
+        div[data-testid="stTabs"] button[aria-selected="true"] {
+            color: var(--rh-text);
+            background: rgba(57, 217, 138, 0.08);
+            border-bottom-color: var(--rh-accent);
+        }
+
+        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stForm"],
+        div[data-testid="stExpander"],
+        [data-testid="stMetric"],
+        [data-testid="stDataFrame"] {
+            background: rgba(13, 25, 31, 0.86);
+            border: 1px solid var(--rh-border);
+            border-radius: 8px;
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+        }
+
+        div[data-testid="stForm"] {
+            padding: 1rem;
+        }
+
+        [data-testid="stMetric"] {
+            padding: 1rem;
+        }
+
+        [data-testid="stMetricLabel"] p {
+            color: var(--rh-muted);
+            font-weight: 700;
+        }
+
+        [data-testid="stMetricValue"] {
+            color: var(--rh-text);
+            font-weight: 850;
+        }
+
+        [data-testid="stAlert"] {
+            border-radius: 8px;
+            border: 1px solid rgba(151, 179, 166, 0.16);
+            background: rgba(17, 36, 44, 0.92);
+        }
+
+        [data-baseweb="input"] > div,
+        [data-baseweb="select"] > div,
+        [data-baseweb="textarea"] > div,
+        [data-baseweb="base-input"],
+        textarea,
+        input {
+            background-color: #0a151a !important;
+            border-color: rgba(151, 179, 166, 0.24) !important;
+            color: var(--rh-text) !important;
+            border-radius: 8px !important;
+        }
+
+        [data-baseweb="input"]:focus-within > div,
+        [data-baseweb="select"]:focus-within > div,
+        [data-baseweb="textarea"]:focus-within > div {
+            border-color: var(--rh-accent) !important;
+            box-shadow: 0 0 0 1px rgba(57, 217, 138, 0.38) !important;
+        }
+
+        .stButton > button,
+        .stFormSubmitButton > button {
+            width: 100%;
+            border: 1px solid rgba(57, 217, 138, 0.42);
+            border-radius: 8px;
+            background: linear-gradient(135deg, #31c77f 0%, #1f9d70 100%);
+            color: #04100b;
+            font-weight: 850;
+            min-height: 2.75rem;
+            box-shadow: 0 10px 26px rgba(57, 217, 138, 0.20);
+        }
+
+        .stButton > button:hover,
+        .stFormSubmitButton > button:hover {
+            border-color: rgba(92, 200, 255, 0.56);
+            color: #03100b;
+            transform: translateY(-1px);
+        }
+
+        [data-testid="stDataFrame"] {
+            overflow: hidden;
+        }
+
+        hr {
+            border-color: rgba(151, 179, 166, 0.14);
+        }
+
+        a {
+            color: var(--rh-accent-2) !important;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        @media (max-width: 760px) {
+            .block-container {
+                padding: 1rem 0.85rem 2rem;
+            }
+
+            .ride-hero-header {
+                padding: 1rem;
+            }
+
+            .ride-hero-title {
+                font-size: 1.7rem;
+            }
+
+            .welcome-shell {
+                min-height: auto;
+                padding: 0.75rem 0 1.5rem;
+            }
+
+            .welcome-card {
+                padding: 1.15rem;
+            }
+
+            .welcome-title {
+                font-size: 2.15rem;
+            }
+
+            .welcome-grid {
+                grid-template-columns: 1fr;
+            }
+
+            div[data-testid="stTabs"] button {
+                padding: 0.65rem 0.55rem;
+                font-size: 0.86rem;
+            }
         }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- Database helpers ---
+# --- Database layer ---
 DB_PATH = "data.db"
+DB_BACKEND = os.getenv("RIDE_HERO_DB_BACKEND", "sqlite").lower()
+SUPABASE_TABLE = "records"
 
 RECORD_COLUMNS = {
     "entry_date": "TEXT",
@@ -37,119 +324,242 @@ RECORD_COLUMNS = {
     "platform": "TEXT",
 }
 
-conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+
+def record_payload(entry_date, income, fuel, toll, maintenance, food, other, miles, start_time, end_time, platform):
+    """Create one normalized record payload shared by SQLite and future Supabase writes."""
+    return {
+        "entry_date": entry_date.isoformat() if hasattr(entry_date, "isoformat") else entry_date,
+        "income": income,
+        "fuel": fuel,
+        "toll": toll,
+        "maintenance": maintenance,
+        "food": food,
+        "other": other,
+        "miles": miles,
+        "start_time": start_time,
+        "end_time": end_time,
+        "platform": platform,
+    }
 
 
-def _column_names():
-    return [row[1] for row in conn.execute("PRAGMA table_info(records)").fetchall()]
+class SQLiteDatabase:
+    """Local database backend. Kept as the default until Supabase is enabled."""
 
+    def __init__(self, db_path):
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
 
-def _create_records_table(table_name="records"):
-    columns_sql = ",\n                ".join(
-        f"{column_name} {column_type}"
-        for column_name, column_type in RECORD_COLUMNS.items()
-    )
-    conn.execute(
-        f"""
-        CREATE TABLE IF NOT EXISTS {table_name} (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            {columns_sql}
+    def _column_names(self):
+        return [
+            row[1]
+            for row in self.conn.execute("PRAGMA table_info(records)").fetchall()
+        ]
+
+    def _create_records_table(self, table_name="records"):
+        columns_sql = ",\n                ".join(
+            f"{column_name} {column_type}"
+            for column_name, column_type in RECORD_COLUMNS.items()
         )
-        """
-    )
+        self.conn.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {table_name} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                {columns_sql}
+            )
+            """
+        )
+
+    def init(self):
+        """Create or migrate the records table without deleting saved entries."""
+        with self.conn:
+            table_exists = self.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'records'"
+            ).fetchone()
+
+            if not table_exists:
+                self._create_records_table()
+                return
+
+            existing_columns = self._column_names()
+
+            # Older versions saved records without an ID. Rebuild the table once so
+            # Streamlit can reliably delete by ID while preserving existing rows.
+            if "id" not in existing_columns:
+                self.conn.execute("DROP TABLE IF EXISTS records_migrated")
+                self._create_records_table("records_migrated")
+                shared_columns = [
+                    column_name
+                    for column_name in RECORD_COLUMNS
+                    if column_name in existing_columns
+                ]
+                if shared_columns:
+                    columns_sql = ", ".join(shared_columns)
+                    self.conn.execute(
+                        f"""
+                        INSERT INTO records_migrated ({columns_sql})
+                        SELECT {columns_sql}
+                        FROM records
+                        """
+                    )
+                self.conn.execute("DROP TABLE records")
+                self.conn.execute("ALTER TABLE records_migrated RENAME TO records")
+                existing_columns = self._column_names()
+
+            for column_name, column_type in RECORD_COLUMNS.items():
+                if column_name not in existing_columns:
+                    self.conn.execute(
+                        f"ALTER TABLE records ADD COLUMN {column_name} {column_type}"
+                    )
+
+    def add_record(self, payload):
+        """Insert one earnings record and commit immediately."""
+        with self.conn:
+            self.conn.execute(
+                """
+                INSERT INTO records (
+                    entry_date,
+                    income,
+                    fuel,
+                    toll,
+                    maintenance,
+                    food,
+                    other,
+                    miles,
+                    start_time,
+                    end_time,
+                    platform
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    payload["entry_date"],
+                    payload["income"],
+                    payload["fuel"],
+                    payload["toll"],
+                    payload["maintenance"],
+                    payload["food"],
+                    payload["other"],
+                    payload["miles"],
+                    payload["start_time"],
+                    payload["end_time"],
+                    payload["platform"],
+                ),
+            )
+
+    def delete_record(self, record_id):
+        """Delete one earnings record by ID."""
+        with self.conn:
+            result = self.conn.execute(
+                "DELETE FROM records WHERE id = ?",
+                (int(record_id),),
+            )
+        return result.rowcount > 0
+
+    def get_records(self):
+        return pd.read_sql(
+            "SELECT * FROM records ORDER BY entry_date DESC, id DESC",
+            self.conn,
+        )
+
+
+def get_config_value(name, default=None):
+    """Read settings from Streamlit secrets first, then environment variables."""
+    try:
+        return st.secrets.get(name, os.getenv(name, default))
+    except Exception:
+        return os.getenv(name, default)
+
+
+class SupabaseDatabase:
+    """Optional Supabase backend with the same interface as SQLiteDatabase."""
+
+    def __init__(self):
+        try:
+            from supabase import create_client
+        except ImportError as exc:
+            raise RuntimeError(
+                "Supabase backend selected, but the 'supabase' package is not installed. "
+                "Add supabase to requirements before enabling RIDE_HERO_DB_BACKEND=supabase."
+            ) from exc
+
+        supabase_url = get_config_value("SUPABASE_URL")
+        supabase_key = (
+            get_config_value("SUPABASE_SERVICE_ROLE_KEY")
+            or get_config_value("SUPABASE_ANON_KEY")
+        )
+
+        if not supabase_url or not supabase_key:
+            raise RuntimeError(
+                "Supabase backend selected, but SUPABASE_URL and a Supabase key are missing."
+            )
+
+        self.client = create_client(supabase_url, supabase_key)
+        self.table_name = get_config_value("SUPABASE_TABLE", SUPABASE_TABLE)
+
+    def init(self):
+        """Supabase schema is managed outside the app with SQL migrations."""
+        return None
+
+    def add_record(self, payload):
+        self.client.table(self.table_name).insert(payload).execute()
+
+    def delete_record(self, record_id):
+        response = (
+            self.client.table(self.table_name)
+            .delete()
+            .eq("id", int(record_id))
+            .execute()
+        )
+        return bool(getattr(response, "data", None))
+
+    def get_records(self):
+        response = (
+            self.client.table(self.table_name)
+            .select("*")
+            .order("entry_date", desc=True)
+            .order("id", desc=True)
+            .execute()
+        )
+        return pd.DataFrame(getattr(response, "data", []) or [])
+
+
+def get_database():
+    """Select the active database backend. SQLite remains the safe local default."""
+    if DB_BACKEND == "supabase":
+        return SupabaseDatabase()
+    return SQLiteDatabase(DB_PATH)
+
+
+db = get_database()
 
 
 def init_db():
-    """Create or migrate the records table without deleting saved entries."""
-    with conn:
-        table_exists = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'records'"
-        ).fetchone()
-
-        if not table_exists:
-            _create_records_table()
-            return
-
-        existing_columns = _column_names()
-
-        # Older versions saved records without an ID. Rebuild the table once so
-        # Streamlit can reliably delete by ID while preserving existing rows.
-        if "id" not in existing_columns:
-            conn.execute("DROP TABLE IF EXISTS records_migrated")
-            _create_records_table("records_migrated")
-            shared_columns = [
-                column_name
-                for column_name in RECORD_COLUMNS
-                if column_name in existing_columns
-            ]
-            if shared_columns:
-                columns_sql = ", ".join(shared_columns)
-                conn.execute(
-                    f"""
-                    INSERT INTO records_migrated ({columns_sql})
-                    SELECT {columns_sql}
-                    FROM records
-                    """
-                )
-            conn.execute("DROP TABLE records")
-            conn.execute("ALTER TABLE records_migrated RENAME TO records")
-            existing_columns = _column_names()
-
-        for column_name, column_type in RECORD_COLUMNS.items():
-            if column_name not in existing_columns:
-                conn.execute(
-                    f"ALTER TABLE records ADD COLUMN {column_name} {column_type}"
-                )
+    db.init()
 
 
 def add_record(entry_date, income, fuel, toll, maintenance, food, other, miles, start_time, end_time, platform):
-    """Insert one earnings record and commit immediately."""
-    with conn:
-        conn.execute(
-            """
-            INSERT INTO records (
-                entry_date,
-                income,
-                fuel,
-                toll,
-                maintenance,
-                food,
-                other,
-                miles,
-                start_time,
-                end_time,
-                platform
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                entry_date.isoformat(),
-                income,
-                fuel,
-                toll,
-                maintenance,
-                food,
-                other,
-                miles,
-                start_time,
-                end_time,
-                platform,
-            ),
+    db.add_record(
+        record_payload(
+            entry_date,
+            income,
+            fuel,
+            toll,
+            maintenance,
+            food,
+            other,
+            miles,
+            start_time,
+            end_time,
+            platform,
         )
+    )
 
 
 def delete_record(record_id):
-    """Delete one earnings record by ID."""
-    with conn:
-        result = conn.execute("DELETE FROM records WHERE id = ?", (int(record_id),))
-    return result.rowcount > 0
+    return db.delete_record(record_id)
 
 
 def get_data():
-    return pd.read_sql(
-        "SELECT * FROM records ORDER BY entry_date DESC, id DESC",
-        conn,
-    )
+    return db.get_records()
 
 
 def prepare_records(df):
@@ -196,19 +606,191 @@ def clear_entry_form():
         "food_input",
         "other_input",
         "miles_input",
-        "custom_company_input",
-        "selected_companies",
+        "start_time_12hr",
+        "end_time_12hr",
     ]:
         st.session_state.pop(key, None)
+
+
+def current_platform_value():
+    """Build the active platform label from Streamlit widget state."""
+    selected_companies = st.session_state.get("selected_companies", [])
+    custom_company = st.session_state.get("custom_company_input", "").strip()
+    platform_list = list(selected_companies)
+
+    if custom_company:
+        platform_list.append(custom_company)
+
+    return ", ".join(dict.fromkeys(platform_list))
+
+
+def draft_entry_signature(platform):
+    """Identify the current draft so platform switching does not duplicate a manual save."""
+    return (
+        st.session_state.get("entry_date_input", date.today()),
+        st.session_state.get("income_input", 0.0),
+        st.session_state.get("fuel_input", 0.0),
+        st.session_state.get("toll_input", 0.0),
+        st.session_state.get("maintenance_input", 0.0),
+        st.session_state.get("food_input", 0.0),
+        st.session_state.get("other_input", 0.0),
+        st.session_state.get("miles_input", 0.0),
+        st.session_state.get("start_time_12hr", "Optional"),
+        st.session_state.get("end_time_12hr", "Optional"),
+        platform,
+    )
+
+
+def save_current_entry_before_platform_switch():
+    """Save a positive-income draft, then clear entry fields for the new platform."""
+    new_platform = current_platform_value()
+    previous_platform = st.session_state.get("active_platform")
+
+    if previous_platform is None:
+        st.session_state["active_platform"] = new_platform
+        return
+
+    if new_platform == previous_platform:
+        return
+
+    if st.session_state.get("income_input", 0.0) > 0:
+        save_platform = previous_platform or new_platform
+        signature = draft_entry_signature(save_platform)
+        if signature != st.session_state.get("last_saved_entry_signature"):
+            add_record(
+                st.session_state.get("entry_date_input", date.today()),
+                st.session_state.get("income_input", 0.0),
+                st.session_state.get("fuel_input", 0.0),
+                st.session_state.get("toll_input", 0.0),
+                st.session_state.get("maintenance_input", 0.0),
+                st.session_state.get("food_input", 0.0),
+                st.session_state.get("other_input", 0.0),
+                st.session_state.get("miles_input", 0.0),
+                st.session_state.get("start_time_12hr", "Optional"),
+                st.session_state.get("end_time_12hr", "Optional"),
+                save_platform,
+            )
+            st.session_state["last_saved_entry_signature"] = signature
+            st.session_state["platform_switch_saved"] = True
+
+    for key in [
+        "income_input",
+        "fuel_input",
+        "toll_input",
+        "maintenance_input",
+        "food_input",
+        "other_input",
+        "miles_input",
+        "start_time_12hr",
+        "end_time_12hr",
+    ]:
+        st.session_state.pop(key, None)
+
+    st.session_state["active_platform"] = new_platform
+
+
+def reset_entry_and_platform():
+    """Clear the entry workflow and platform selection for a fresh manual start."""
+    clear_entry_form()
+    for key in [
+        "custom_company_input",
+        "selected_companies",
+        "active_platform",
+    ]:
+        st.session_state.pop(key, None)
+
+
+def enter_dashboard():
+    """Persist the welcome-screen choice for the current Streamlit session."""
+    st.session_state["ride_hero_dashboard_open"] = True
+
+
+def render_welcome_page():
+    """Premium first-run welcome screen before the main dashboard."""
+    st.markdown(
+        """
+        <div class="welcome-shell">
+            <div class="welcome-card">
+                <div class="welcome-logo">RH</div>
+                <h1 class="welcome-title">Ride Hero</h1>
+                <p class="welcome-tagline">Built by a driver, for drivers.</p>
+                <p class="welcome-copy">
+                    A focused command center for FHV drivers to understand daily profit,
+                    stay ahead of obligations, and make better driving decisions.
+                </p>
+                <div class="welcome-grid">
+                    <div class="welcome-feature">Track earnings</div>
+                    <div class="welcome-feature">Track expenses</div>
+                    <div class="welcome-feature">Monitor goals</div>
+                    <div class="welcome-feature">Manage documents and bills</div>
+                    <div class="welcome-feature">Ask RideHero assistant</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    _, button_col, _ = st.columns([1, 2, 1])
+    with button_col:
+        st.button(
+            "Enter Dashboard",
+            key="enter_dashboard_button",
+            on_click=enter_dashboard,
+        )
 
 
 init_db()
 
 
 # --- UI ---
-st.title("Ride Hero")
-st.caption("Smart tools for FHV Drivers")
+if not st.session_state.get("ride_hero_dashboard_open", False):
+    render_welcome_page()
+    st.stop()
 
+st.markdown(
+    """
+    <div class="ride-hero-header" style="display:flex; align-items:center; gap:20px;">
+
+        <img src="https://raw.githubusercontent.com/Attiq1006/Ride-Hero/main/ride_hero_logo.png"
+        width="140"
+        style="border-radius:18px;"/>
+
+        <div>
+
+            <div class="ride-hero-eyebrow"
+            style="
+            font-size:22px;
+            font-weight:700;
+            letter-spacing:2px;
+            color:#39d98a;
+            ">
+            RIDE HERO
+            </div>
+
+            <h1 class="ride-hero-title"
+            style="
+            font-size:56px;
+            margin-top:4px;
+            margin-bottom:8px;
+            ">
+            Driver Earnings Command Center
+            </h1>
+
+            <p class="ride-hero-subtitle"
+            style="
+            font-size:18px;
+            color:#b8c4d6;
+            ">
+            Smart tools for FHV drivers to track profit, documents, bills, fares, services, and deals.
+            </p>
+
+        </div>
+
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 today = date.today()
 holiday_alerts = {
     "New Year's Day": date(today.year, 1, 1),
@@ -315,68 +897,67 @@ with tab1:
         col2.metric("Total Expenses", f"${total_expenses:.2f}")
         col3.metric("Net Profit", f"${total_profit:.2f}")
 
-    with st.form("earnings_entry_form", clear_on_submit=False):
-        entry_date = st.date_input("Date", date.today())
-        income = st.number_input("Daily Income ($)", min_value=0.0, key="income_input")
-        fuel = st.number_input("Fuel ($)", min_value=0.0, key="fuel_input")
-        toll = st.number_input("Tolls ($)", min_value=0.0, key="toll_input")
-        maintenance = st.number_input("Maintenance ($)", min_value=0.0, key="maintenance_input")
-        food = st.number_input("Food ($)", min_value=0.0, key="food_input")
-        other = st.number_input("Other Expenses ($)", min_value=0.0, key="other_input")
-        miles = st.number_input("Miles Driven", min_value=0.0, key="miles_input")
+    st.subheader("Company / Platform")
+    company_options = [
+        "Uber",
+        "Lyft",
+        "Curb",
+        "Journey",
+        "Myle",
+        "Arro",
+        "Blacklane",
+        "Local Base",
+        "Other",
+    ]
 
-        expenses_total = fuel + toll + maintenance + food + other
-        net_profit = income - expenses_total
-        st.success(f"Estimated Net Profit: ${net_profit:.2f}")
+    selected_companies = st.multiselect(
+        "Select Companies",
+        company_options,
+        key="selected_companies",
+        on_change=save_current_entry_before_platform_switch,
+    )
+    custom_company = st.text_input(
+        "Add Custom Company / Base Name",
+        key="custom_company_input",
+        on_change=save_current_entry_before_platform_switch,
+    )
 
-        time_options = [
-            "Optional",
-            "12:00 AM", "1:00 AM", "2:00 AM", "3:00 AM", "4:00 AM", "5:00 AM",
-            "6:00 AM", "7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM",
-            "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
-            "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM",
-        ]
+    platform = current_platform_value()
+    st.session_state.setdefault("active_platform", platform)
 
-        start_time = st.selectbox("Start Time", time_options, key="start_time_12hr")
-        end_time = st.selectbox("End Time", time_options, key="end_time_12hr")
+    if st.session_state.pop("platform_switch_saved", False):
+        st.success("Previous entry saved. New entry started for the selected company.")
 
-        st.subheader("Company / Platform")
-        company_options = [
-            "Uber",
-            "Lyft",
-            "Curb",
-            "Journey",
-            "Myle",
-            "Arro",
-            "Blacklane",
-            "Local Base",
-            "Other",
-        ]
+    if platform:
+        st.success(f"Selected companies: {platform}")
+    else:
+        st.warning("Please select or enter at least one company.")
 
-        selected_companies = st.multiselect(
-            "Select Companies",
-            company_options,
-            key="selected_companies",
-        )
-        custom_company = st.text_input(
-            "Add Custom Company / Base Name",
-            key="custom_company_input",
-        )
+    entry_date = st.date_input("Date", date.today(), key="entry_date_input")
+    income = st.number_input("Daily Income ($)", min_value=0.0, key="income_input")
+    fuel = st.number_input("Fuel ($)", min_value=0.0, key="fuel_input")
+    toll = st.number_input("Tolls ($)", min_value=0.0, key="toll_input")
+    maintenance = st.number_input("Maintenance ($)", min_value=0.0, key="maintenance_input")
+    food = st.number_input("Food ($)", min_value=0.0, key="food_input")
+    other = st.number_input("Other Expenses ($)", min_value=0.0, key="other_input")
+    miles = st.number_input("Miles Driven", min_value=0.0, key="miles_input")
 
-        platform_list = selected_companies.copy()
-        if custom_company.strip():
-            platform_list.append(custom_company.strip())
+    expenses_total = fuel + toll + maintenance + food + other
+    net_profit = income - expenses_total
+    st.success(f"Estimated Net Profit: ${net_profit:.2f}")
 
-        platform = ", ".join(dict.fromkeys(platform_list))
+    time_options = [
+        "Optional",
+        "12:00 AM", "1:00 AM", "2:00 AM", "3:00 AM", "4:00 AM", "5:00 AM",
+        "6:00 AM", "7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM",
+        "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
+        "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM",
+    ]
 
-        if platform:
-            st.success(f"Selected companies: {platform}")
-        else:
-            st.warning("Please select or enter at least one company.")
+    start_time = st.selectbox("Start Time", time_options, key="start_time_12hr")
+    end_time = st.selectbox("End Time", time_options, key="end_time_12hr")
 
-        submitted = st.form_submit_button("Save Entry")
-
-    if submitted:
+    if st.button("Save Entry", key="save_entry_button"):
         add_record(
             entry_date,
             income,
@@ -390,10 +971,11 @@ with tab1:
             end_time,
             platform,
         )
+        st.session_state["last_saved_entry_signature"] = draft_entry_signature(platform)
         st.success("Entry saved successfully!")
         st.rerun()
 
-    st.button("Clear Form / New Entry", on_click=clear_entry_form)
+    st.button("Clear Form / New Entry", on_click=reset_entry_and_platform)
 
     df = prepare_records(get_data())
     st.subheader("Saved Records")
